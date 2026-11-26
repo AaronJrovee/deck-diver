@@ -1,0 +1,2347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DECK DIVER — Pokémon TCG Deckbuilding Tool</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root {
+      --bg-dark: #070710;
+      --bg-panel: #0f1021;
+      --bg-card: #15172e;
+      --purple-glow: #7c4dff;
+      --blue-glow: #00b0ff;
+      --indigo-border: #651fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Calibri', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 18% 18%, rgba(124, 77, 255, 0.17) 0%, transparent 45%),
+        radial-gradient(circle at 82% 82%, rgba(0, 176, 255, 0.16) 0%, transparent 45%);
+      color: #ffffff;
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Custom Purple/Blue Glowing Borders */
+    .neon-border {
+      border: 2px solid #7c4dff;
+      box-shadow: 0 0 14px rgba(124, 77, 255, 0.4), inset 0 0 8px rgba(0, 176, 255, 0.15);
+    }
+
+    .neon-border-subtle {
+      border: 1.5px solid rgba(124, 77, 255, 0.8);
+      box-shadow: 0 0 8px rgba(0, 176, 255, 0.25);
+    }
+
+    .neon-btn {
+      background: linear-gradient(135deg, rgba(24, 26, 48, 0.96), rgba(13, 14, 28, 0.98));
+      border: 2px solid #7c4dff;
+      box-shadow: 0 0 10px rgba(101, 31, 255, 0.4), 0 0 4px rgba(0, 176, 255, 0.4);
+      color: #ffffff;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .neon-btn:hover:not(:disabled) {
+      border-color: #00b0ff;
+      box-shadow: 0 0 18px rgba(0, 176, 255, 0.7), 0 0 10px rgba(124, 77, 255, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .neon-btn:active:not(:disabled) {
+      transform: translateY(0px) scale(0.98);
+    }
+
+    .neon-title {
+      text-shadow: 0 0 16px rgba(124, 77, 255, 0.85), 0 0 32px rgba(0, 176, 255, 0.65);
+      letter-spacing: 0.12em;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0b14;
+      border-radius: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #651fff, #00b0ff);
+      border-radius: 6px;
+    }
+
+    /* Clean Non-Overlapping Individual Card Tile */
+    .card-tile {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(180deg, #161830 0%, #0e1022 100%);
+      border: 1.5px solid rgba(124, 77, 255, 0.85);
+      border-radius: 0.75rem;
+      padding: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 8px rgba(0, 176, 255, 0.18);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .card-tile:hover {
+      border-color: #00b0ff;
+      box-shadow: 0 6px 16px rgba(0, 176, 255, 0.4), 0 0 12px rgba(124, 77, 255, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .card-artwork-frame {
+      width: 100%;
+      aspect-ratio: 2.5 / 3.5;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background-color: #0b0c18;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .card-artwork-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Count Badge Circle */
+    .count-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, #1d1742 0%, #090a14 100%);
+      border: 2px solid #00b0ff;
+      box-shadow: 0 0 10px rgba(124, 77, 255, 0.95), 0 0 6px rgba(0, 176, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: #ffffff;
+    }
+
+    /* Pulse Animation for Start Button */
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 18px rgba(124, 77, 255, 0.75), 0 0 36px rgba(0, 176, 255, 0.45), inset 0 0 15px rgba(124, 77, 255, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 32px rgba(0, 176, 255, 0.95), 0 0 55px rgba(124, 77, 255, 0.8), inset 0 0 22px rgba(0, 176, 255, 0.65);
+      }
+    }
+    .start-round-btn {
+      animation: pulseGlow 2.6s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-white antialiased selection:bg-purple-600 selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- SCREEN 1: LANDING SCREEN                   -->
+  <!-- ========================================== -->
+  <section id="screen-landing" class="min-h-screen flex flex-col items-center justify-between py-14 px-4 relative overflow-hidden">
+    <!-- Decorative Background Rings -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full border border-purple-500/20 pointer-events-none"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] rounded-full border border-blue-500/15 pointer-events-none"></div>
+
+    <!-- Top Center Header -->
+    <div class="text-center z-10 mt-4">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/80 neon-border-subtle text-xs uppercase tracking-widest text-cyan-300 mb-4">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span id="landing-format-pill">DETECTING LIVE STANDARD FORMAT & LIMITLESS TCG FEED...</span>
+      </div>
+      <h1 class="text-6xl sm:text-8xl font-extrabold tracking-wider neon-title bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-cyan-300">
+        DECK DIVER
+      </h1>
+      <p class="mt-3 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
+        100% live Limitless TCG tournament metagame scraper, dynamic Standard Format regulation detector, and non-overlapping Pokémon TCG deckbuilder & playtester.
+      </p>
+    </div>
+
+    <!-- Center Round Start Button with Arrow Underneath -->
+    <div class="flex flex-col items-center justify-center z-10 my-auto">
+      <button
+        onclick="goToScreen('strategy')"
+        aria-label="Start Deck Diver"
+        class="start-round-btn group w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-[#12121f] border-4 border-[#7c4dff] hover:border-[#00b0ff] flex flex-col items-center justify-center transition-all duration-300 hover:scale-105 cursor-pointer"
+      >
+        <span class="text-xl sm:text-2xl font-bold tracking-widest text-white group-hover:text-cyan-300 transition-colors">START</span>
+        <i class="fa-solid fa-arrow-down text-2xl sm:text-3xl mt-2 text-purple-400 group-hover:text-cyan-300 group-hover:translate-y-1 transition-all"></i>
+      </button>
+      <span class="mt-4 text-sm text-slate-300 tracking-wide uppercase">Click to Fetch Current Top 10 Limitless TCG Strategies</span>
+    </div>
+
+    <!-- Footer Pill -->
+    <div class="z-10 text-xs text-slate-300 flex flex-wrap items-center justify-center gap-4">
+      <span><i class="fa-solid fa-trophy text-cyan-400 mr-1"></i> Live Limitless TCG Standard Tournament Scraper</span>
+      <span>•</span>
+      <span><i class="fa-solid fa-scale-balanced text-purple-400 mr-1"></i> Dynamic Standard Regulation Mark Enforcement</span>
+      <span>•</span>
+      <span><i class="fa-solid fa-table-cells-large text-indigo-400 mr-1"></i> Clean Individual Card Grid</span>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- SCREEN 2: CHOOSE YOUR DECK'S STRATEGY      -->
+  <!-- ========================================== -->
+  <section id="screen-strategy" class="hidden min-h-screen flex flex-col items-center py-8 px-4 sm:px-8 max-w-5xl mx-auto">
+    <div class="w-full flex flex-wrap items-center justify-between gap-2 mb-6">
+      <button onclick="goToScreen('landing')" class="neon-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left text-purple-400"></i> Back
+      </button>
+      <div class="text-xl font-extrabold tracking-widest neon-title">DECK DIVER</div>
+      <div class="flex items-center gap-2">
+        <span id="strategy-format-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-950/90 neon-border-subtle text-cyan-300 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Standard Format: Detecting...
+        </span>
+        <button onclick="fetchLiveTopStrategiesFromLimitless(true)" class="neon-btn px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5" title="Re-fetch live Limitless TCG Top 10">
+          <i class="fa-solid fa-rotate text-cyan-300"></i> Refresh Live Meta
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center mb-6">
+      <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-wide neon-title">
+        Choose Your Deck's Strategy
+      </h2>
+      <p class="text-slate-300 mt-2 text-sm sm:text-base max-w-2xl mx-auto">
+        Pulled live from <span class="text-cyan-300 font-bold">Limitless TCG</span> Standard tournament data. Click any deck to load its live tournament card distributions, or click <span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-purple-400 text-xs font-bold text-purple-300 mx-1">?</span> to fetch and inspect its primary Standard-legal card.
+      </p>
+    </div>
+
+    <!-- Live Scraping Status Banner -->
+    <div id="limitless-scrape-status" class="w-full mb-4 px-4 py-2.5 rounded-xl bg-[#121428] neon-border-subtle flex items-center justify-between text-xs sm:text-sm text-cyan-200">
+      <div class="flex items-center gap-2.5">
+        <i id="scrape-status-icon" class="fa-solid fa-circle-notch fa-spin text-cyan-400"></i>
+        <span id="scrape-status-text">Connecting to live Limitless TCG Standard Metagame leaderboard...</span>
+      </div>
+      <span id="scrape-source-tag" class="text-[11px] px-2.5 py-0.5 rounded bg-purple-950 border border-purple-400/50 text-purple-200 font-bold">
+        limitlesstcg.com
+      </span>
+    </div>
+
+    <!-- List of 10 Top Meta Decks + Choose Your Own -->
+    <div id="strategy-list" class="w-full grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-6">
+      <!-- Dynamically populated from live Limitless TCG scrape -->
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- SCREEN 3: 4-QUADRANT DECK BUILDER          -->
+  <!-- ========================================== -->
+  <section id="screen-builder" class="hidden min-h-screen flex flex-col h-screen overflow-hidden">
+    <!-- Top Bar -->
+    <header class="bg-[#0b0c18] border-b-2 border-[#7c4dff] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <button onclick="goToScreen('strategy')" class="neon-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2" title="Change Strategy">
+          <i class="fa-solid fa-compass text-purple-400"></i>
+          <span>Strategies</span>
+        </button>
+        <div class="h-6 w-[2px] bg-indigo-500/40 hidden sm:block"></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-extrabold text-lg sm:text-xl tracking-wider neon-title">DECK DIVER</span>
+          <span id="active-strategy-badge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-950/90 border border-purple-400 text-purple-200">
+            Select Strategy
+          </span>
+          <span id="standard-format-header-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-950/90 border border-emerald-400/70 text-emerald-300 flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="standard-reg-marks-text">STANDARD: DETECTING...</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Center Quick Deck Controls & Total Count -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="px-3.5 py-1 rounded-lg bg-[#14162b] neon-border-subtle flex items-center gap-2">
+          <span class="text-xs uppercase tracking-wider text-slate-300">Deck:</span>
+          <span id="deck-total-count" class="text-lg font-extrabold text-cyan-300">0 / 60</span>
+        </div>
+        <button onclick="autoCompleteFromLiveDistribution()" id="btn-autofill-meta" class="neon-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5" title="Build full 60-card deck using the live Limitless TCG card distribution">
+          <i class="fa-solid fa-cloud-arrow-down text-cyan-400"></i>
+          <span class="hidden md:inline">Auto-Fill Live Tournament 60</span>
+        </button>
+        <button onclick="clearCurrentDeck()" class="neon-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1.5 hover:border-rose-500" title="Clear all cards from deck">
+          <i class="fa-solid fa-trash-can text-rose-400"></i>
+          <span class="hidden md:inline">Clear</span>
+        </button>
+      </div>
+
+      <!-- Top Right Playtest Button -->
+      <div>
+        <button onclick="openPlaytestModal()" class="neon-btn px-4 py-2 rounded-xl text-sm sm:text-base font-extrabold flex items-center gap-2 bg-gradient-to-r from-purple-900/80 to-blue-900/80 border-2 border-[#00b0ff] shadow-[0_0_15px_rgba(0,176,255,0.5)]">
+          <i class="fa-solid fa-play text-cyan-300"></i>
+          <span>Playtest</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 2x2 Quadrant Grid -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-3 p-3 overflow-y-auto lg:overflow-hidden">
+      
+      <!-- QUADRANT 1: TOP LEFT — YOUR DECK (CLEAN SEPARATED INDIVIDUAL CARD TILES) -->
+      <div class="bg-[#0f1021]/95 neon-border rounded-xl flex flex-col overflow-hidden min-h-[340px] lg:min-h-0">
+        <div class="px-4 py-2.5 bg-[#16182f] border-b border-indigo-500/40 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-purple-400"></i>
+            <h3 class="font-bold text-base sm:text-lg tracking-wide">Your Deck</h3>
+            <span id="deck-breakdown-pill" class="text-xs text-slate-200 bg-indigo-950/80 border border-indigo-500/40 px-2.5 py-0.5 rounded-full">
+              PKMN: 0 | TRNR: 0 | ENRG: 0
+            </span>
+          </div>
+          <span id="deck-loading-indicator" class="text-xs text-cyan-300 hidden items-center gap-1.5">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Syncing live cards...
+          </span>
+          <span class="text-xs text-slate-400 hidden xl:inline">Each card is separated • Click image for live rules</span>
+        </div>
+
+        <!-- Non-overlapping individual card grid -->
+        <div id="deck-grid" class="p-3.5 overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4 content-start">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- QUADRANT 2: TOP RIGHT — LIVE STANDARD CARD SEARCH -->
+      <div class="bg-[#0f1021]/95 neon-border rounded-xl flex flex-col overflow-hidden min-h-[340px] lg:min-h-0">
+        <div class="px-4 py-2.5 bg-[#16182f] border-b border-indigo-500/40 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass text-cyan-400"></i>
+            <h3 class="font-bold text-base sm:text-lg tracking-wide">Standard Card Search</h3>
+            <span id="search-count-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-blue-950 border border-cyan-500/40 text-cyan-200">
+              Standard Legal Only
+            </span>
+          </div>
+          <!-- Category Filter Buttons -->
+          <div class="flex items-center gap-1.5" id="search-filters">
+            <button onclick="setSearchFilter('ALL')" data-filter="ALL" class="filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-600 border border-cyan-300 text-white">All</button>
+            <button onclick="setSearchFilter('Pokemon')" data-filter="Pokemon" class="filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-[#1c2035] border border-indigo-500/50 text-slate-300 hover:text-white">Pokémon</button>
+            <button onclick="setSearchFilter('Trainer')" data-filter="Trainer" class="filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-[#1c2035] border border-indigo-500/50 text-slate-300 hover:text-white">Trainer</button>
+            <button onclick="setSearchFilter('Energy')" data-filter="Energy" class="filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-[#1c2035] border border-indigo-500/50 text-slate-300 hover:text-white">Energy</button>
+          </div>
+        </div>
+
+        <!-- Search Input Bar -->
+        <div class="p-2.5 bg-[#131529] border-b border-indigo-500/30 shrink-0 flex items-center gap-2">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400 text-sm"></i>
+            <input
+              id="card-search-input"
+              type="text"
+              oninput="handleLiveSearchInput()"
+              onkeydown="if(event.key==='Enter') executeLiveCardSearch(true)"
+              placeholder="Search live Standard-legal cards (e.g., Dragapult, Budew, Ultra Ball, Iono, Energy)..."
+              class="w-full pl-9 pr-8 py-1.5 rounded-lg bg-[#080912] border border-[#7c4dff] focus:border-[#00b0ff] focus:outline-none text-sm text-white placeholder-slate-400"
+            />
+            <button onclick="clearSearchInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <button onclick="executeLiveCardSearch(true)" class="neon-btn px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 shrink-0">
+            <i class="fa-solid fa-bolt text-cyan-300"></i>
+            <span>Search Live</span>
+          </button>
+        </div>
+
+        <!-- Non-overlapping individual card grid -->
+        <div id="search-results-grid" class="p-3.5 overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4 content-start">
+          <!-- Dynamically populated from live API -->
+        </div>
+      </div>
+
+      <!-- QUADRANT 3: BOTTOM LEFT — RECOMMENDED CHANGES (LIVE LIMITLESS DECK DISTRIBUTIONS) -->
+      <div class="bg-[#0f1021]/95 neon-border rounded-xl flex flex-col overflow-hidden min-h-[320px] lg:min-h-0">
+        <div class="px-4 py-2.5 bg-[#16182f] border-b border-indigo-500/40 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-amber-400"></i>
+            <h3 class="font-bold text-base sm:text-lg tracking-wide">Recommended Changes</h3>
+            <span id="rec-distribution-source" class="text-[11px] px-2 py-0.5 rounded bg-purple-950 border border-purple-500/60 text-purple-200">
+              Live Limitless Deck Distribution
+            </span>
+          </div>
+          <span id="rec-subtitle" class="text-xs text-cyan-300 font-semibold hidden sm:inline">Live Tournament Counts</span>
+        </div>
+
+        <!-- Non-overlapping individual card grid -->
+        <div id="recommended-grid" class="p-3.5 overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4 content-start">
+          <!-- Dynamically populated from live Limitless tournament card distributions -->
+        </div>
+      </div>
+
+      <!-- QUADRANT 4: BOTTOM RIGHT — DECK STATS -->
+      <div class="bg-[#0f1021]/95 neon-border rounded-xl flex flex-col overflow-hidden min-h-[320px] lg:min-h-0">
+        <div class="px-4 py-2.5 bg-[#16182f] border-b border-indigo-500/40 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-cyan-400"></i>
+            <h3 class="font-bold text-base sm:text-lg tracking-wide">Deck Stats & Analytics</h3>
+          </div>
+          <span class="text-xs text-slate-400">Live Hypergeometric & Distribution Engine</span>
+        </div>
+
+        <div class="p-4 overflow-y-auto flex-1 flex flex-col justify-between gap-3">
+          <!-- Top Row: Mulligan & Brick Rates -->
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Mulligan Rate Box -->
+            <div class="p-3 rounded-xl bg-[#15182c] neon-border-subtle flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-300 font-bold">Mulligan Rate</span>
+                <i class="fa-solid fa-rotate-left text-purple-400 text-sm"></i>
+              </div>
+              <div class="my-1 flex items-baseline gap-2">
+                <span id="stat-mulligan" class="text-2xl sm:text-3xl font-extrabold text-white">0.0%</span>
+                <span id="stat-mulligan-tag" class="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40">Optimal</span>
+              </div>
+              <p id="stat-mulligan-desc" class="text-xs text-slate-400">
+                Chance of opening 0 Basic Pokémon in a 7-card hand.
+              </p>
+            </div>
+
+            <!-- Brick Rate Box -->
+            <div class="p-3 rounded-xl bg-[#15182c] neon-border-subtle flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-300 font-bold">Brick Rate</span>
+                <i class="fa-solid fa-brick-wall text-blue-400 text-sm"></i>
+              </div>
+              <div class="my-1 flex items-baseline gap-2">
+                <span id="stat-brick" class="text-2xl sm:text-3xl font-extrabold text-white">0.0%</span>
+                <span id="stat-brick-tag" class="text-xs px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-500/40">Low Risk</span>
+              </div>
+              <p id="stat-brick-desc" class="text-xs text-slate-400">
+                Chance of opening a dead hand with no draw/search engine.
+              </p>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Deck Consistency /10 & Deck Strategy Power /10 -->
+          <div class="space-y-3 bg-[#14172b] p-3.5 rounded-xl neon-border-subtle">
+            <!-- Consistency Bar -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-sliders text-purple-400"></i> Deck Consistency
+                </span>
+                <span id="stat-consistency-val" class="text-base font-extrabold text-purple-300">0.0 / 10</span>
+              </div>
+              <div class="w-full h-3 bg-[#090b12] rounded-full overflow-hidden border border-purple-500/40">
+                <div id="stat-consistency-bar" class="h-full bg-gradient-to-r from-purple-600 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p id="stat-consistency-tip" class="text-xs text-slate-400 mt-1">
+                Evaluates Basic Pokémon, Draw Supporters, Search Trainers, and Energy ratios from live card data.
+              </p>
+            </div>
+
+            <!-- Strategy Power Bar -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-fire-flame-curved text-blue-400"></i> Deck Strategy Power
+                </span>
+                <span id="stat-power-val" class="text-base font-extrabold text-cyan-300">0.0 / 10</span>
+              </div>
+              <div class="w-full h-3 bg-[#090b12] rounded-full overflow-hidden border border-blue-500/40">
+                <div id="stat-power-bar" class="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-400 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p id="stat-power-tip" class="text-xs text-slate-400 mt-1">
+                Measures alignment against the live Limitless TCG tournament card distribution for this strategy.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- MODAL 1: PRIMARY CARD QUESTION MARK (?)    -->
+  <!-- ========================================== -->
+  <div id="card-preview-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#121324] neon-border rounded-2xl max-w-3xl w-full p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+      <button onclick="closeCardPreviewModal()" class="neon-btn w-9 h-9 rounded-full absolute top-4 right-4 flex items-center justify-center text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
+        <!-- Left: Official High-Res Card Image from Live API -->
+        <div id="modal-card-graphic" class="sm:col-span-5 flex flex-col items-center justify-center">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Right: Live API Card Details & Text -->
+        <div class="sm:col-span-7 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950 border border-purple-400/60 text-xs text-purple-200 font-bold" id="modal-card-badge">
+            Live Database Card Record
+          </div>
+          <h3 id="modal-card-name" class="text-2xl sm:text-3xl font-extrabold text-white neon-title">Loading...</h3>
+          <div id="modal-card-meta" class="text-sm text-cyan-300 font-bold">Fetching from Pokémon TCG Database...</div>
+          
+          <div class="p-3.5 rounded-xl bg-[#191b30] neon-border-subtle space-y-2 max-h-60 overflow-y-auto">
+            <div class="text-xs uppercase tracking-wider text-purple-300 font-bold">Official Card Rules, Abilities & Attacks (Live API)</div>
+            <div id="modal-card-text" class="text-sm text-slate-100 leading-relaxed space-y-2"></div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-[#0e101b] border border-indigo-500/40">
+            <div class="text-xs uppercase tracking-wider text-blue-300 font-bold mb-1">Standard Legality & Limitless Tournament Context</div>
+            <p id="modal-card-strategy-notes" class="text-xs sm:text-sm text-slate-300 leading-relaxed"></p>
+          </div>
+
+          <div class="pt-2 flex flex-wrap justify-end gap-3" id="modal-action-area">
+            <button onclick="closeCardPreviewModal()" class="neon-btn px-5 py-2 rounded-xl text-sm font-bold">
+              Close Preview
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: PLAYTEST SIMULATOR POPUP          -->
+  <!-- ========================================== -->
+  <div id="playtest-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-[#0e1120] neon-border rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 bg-[#15192e] border-b-2 border-[#7c4dff] flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-purple-950 border border-purple-400 flex items-center justify-center">
+            <i class="fa-solid fa-hand-sparkles text-cyan-300"></i>
+          </div>
+          <div>
+            <h3 class="text-lg sm:text-xl font-extrabold tracking-wide neon-title">PLAYTEST SIMULATOR</h3>
+            <p id="playtest-status-line" class="text-xs text-slate-300">7-Card Opening Hand & 6 Prize Cards Set Aside (Non-Overlapping View)</p>
+          </div>
+        </div>
+
+        <!-- Action Buttons: Reset / Draw Card / See Deck / Close -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="resetPlaytest()" class="neon-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate text-purple-400"></i>
+            <span>Reset</span>
+          </button>
+          <button onclick="drawPlaytestCard()" class="neon-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-plus text-cyan-400"></i>
+            <span>Draw Card</span>
+          </button>
+          <button onclick="toggleSeeDeckView()" id="btn-see-deck" class="neon-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-[#00b0ff]">
+            <i class="fa-solid fa-eye text-amber-400"></i>
+            <span id="see-deck-label">See Deck (47)</span>
+          </button>
+          <button onclick="closePlaytestModal()" class="neon-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold hover:border-rose-500">
+            <i class="fa-solid fa-xmark text-rose-400 mr-1"></i> Close
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5">
+        
+        <!-- Top Row: 6 Prize Cards Set Aside & Deck Remaining -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- 6 Prize Cards Box -->
+          <div class="lg:col-span-8 bg-[#14172b] neon-border-subtle rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-award text-purple-400"></i>
+                <span class="font-bold text-sm sm:text-base">6 Prize Cards Set Aside</span>
+                <span class="text-xs text-slate-400">(Click any prize card tile to move it into your hand)</span>
+              </div>
+              <button onclick="toggleRevealAllPrizes()" id="btn-reveal-prizes" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-950 border border-indigo-400 text-indigo-200 hover:bg-indigo-900">
+                <i class="fa-solid fa-eye mr-1"></i> Peek Prizes
+              </button>
+            </div>
+            <!-- Non-overlapping 6-column prize grid -->
+            <div id="playtest-prizes-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Deck Remaining & Opening Hand Check -->
+          <div class="lg:col-span-4 bg-[#14172b] neon-border-subtle rounded-xl p-4 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-sm uppercase tracking-wider text-slate-300">Simulation Telemetry</span>
+                <span id="playtest-hand-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-300 font-bold">
+                  Legal Hand
+                </span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-center my-3">
+                <div class="p-2.5 rounded-lg bg-[#0b0d17] border border-indigo-500/40">
+                  <div class="text-xs text-slate-400">In Hand</div>
+                  <div id="pt-hand-count" class="text-xl font-extrabold text-cyan-300">7</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-[#0b0d17] border border-indigo-500/40">
+                  <div class="text-xs text-slate-400">Prizes</div>
+                  <div id="pt-prize-count" class="text-xl font-extrabold text-purple-300">6</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-[#0b0d17] border border-indigo-500/40">
+                  <div class="text-xs text-slate-400">In Deck</div>
+                  <div id="pt-deck-count" class="text-xl font-extrabold text-white">47</div>
+                </div>
+              </div>
+            </div>
+            <p id="pt-hand-evaluation" class="text-xs text-slate-300 bg-[#0b0d17] p-3 rounded-lg border border-purple-500/30">
+              Tip: Click "See Deck" to open the remaining deck and click any card tile to place it directly into your hand!
+            </p>
+          </div>
+        </div>
+
+        <!-- Middle Section: Current Hand (Clean Non-Overlapping Grid) -->
+        <div class="bg-[#14172b] neon-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-hand-back-fist text-cyan-400"></i>
+              <h4 class="font-bold text-base sm:text-lg">Your Simulated Hand (<span id="hand-count-title">7</span> Cards)</h4>
+            </div>
+            <span class="text-xs text-slate-400">Each card is separated • Click any card to inspect live text</span>
+          </div>
+          <div id="playtest-hand-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3.5">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Collapsible Section: SEE DECK (Select any cards into your hand) -->
+        <div id="playtest-deck-drawer" class="hidden bg-[#121526] neon-border rounded-xl p-4 border-[#00b0ff]">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-box-open text-amber-400"></i>
+              <h4 class="font-bold text-base sm:text-lg text-cyan-300">Remaining Deck — Click Any Card Tile to Add It to Your Hand</h4>
+            </div>
+            <button onclick="toggleSeeDeckView()" class="text-xs px-3 py-1 rounded-lg bg-slate-800 border border-slate-600 hover:text-white">
+              Hide Deck View
+            </button>
+          </div>
+          <div id="playtest-deck-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3.5 max-h-80 overflow-y-auto p-1">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-msg" class="fixed bottom-4 right-4 z-50 hidden px-4 py-2.5 rounded-xl bg-[#16192b] neon-border text-sm font-bold text-white shadow-2xl flex items-center gap-2">
+    <i class="fa-solid fa-circle-info text-cyan-400"></i>
+    <span id="toast-text">Notification</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- LIVE STANDARD FORMAT + LIMITLESS TCG ENGINE -->
+  <!-- ========================================== -->
+  <script>
+    /********************************************************************
+     * 1. DYNAMIC STANDARD FORMAT REGULATION DETECTOR (FUTURE-PROOF)
+     *    - Automatically computes the minimum legal Regulation Mark letter
+     *      from the current date (Pokémon TCG rotates 1 letter every April:
+     *      e.g. April 2024 = F+, April 2025 = G+, April 2026 = H+, April 2027 = I+)
+     *    - Also inspects the newest sets on the live TCGdex API to discover
+     *      all active regulation marks up to the latest released expansion.
+     ********************************************************************/
+    const TCGDEX_BASE = 'https://api.tcgdex.net/v2/en';
+    const POKEMONTCG_IO_BASE = 'https://api.pokemontcg.io/v2/cards';
+
+    // Dynamic state for Standard Format legality
+    let activeStandardMinLetterCode = 72; // Default 'H' (ASCII 72), computed dynamically on init
+    let activeStandardRegMarks = [];      // e.g. ['H', 'I', 'J']
+    let standardFormatLabel = 'REG MARKS H+';
+
+    function computeDynamicMinimumRegulationLetter() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // 1..12
+      // Rotation happens annually in early April.
+      // Season year: before April uses previous year's rotation baseline.
+      const effectiveSeasonYear = month >= 4 ? year : year - 1;
+      // In April 2024, 'F' (ASCII 70) was the minimum legal mark.
+      // Every subsequent April advances the minimum legal regulation letter by +1.
+      const offsetFrom2024 = Math.max(0, effectiveSeasonYear - 2024);
+      const minCharCode = 70 + offsetFrom2024; // 2024->F(70), 2025->G(71), 2026->H(72), 2027->I(73)...
+      return minCharCode;
+    }
+
+    function isRegulationMarkStandardLegal(regMark, cardCategory, isBasicEnergy) {
+      if (isBasicEnergy) return true; // Basic Energies are evergreen in Standard
+      if (!regMark || typeof regMark !== 'string') return false;
+      const clean = regMark.trim().toUpperCase();
+      if (clean.length !== 1) return false;
+      const code = clean.charCodeAt(0);
+      return code >= activeStandardMinLetterCode && code <= 90;
+    }
+
+    async function detectLiveStandardFormat() {
+      activeStandardMinLetterCode = computeDynamicMinimumRegulationLetter();
+      const minChar = String.fromCharCode(activeStandardMinLetterCode);
+      const discoveredMarks = new Set([
+        minChar,
+        String.fromCharCode(activeStandardMinLetterCode + 1),
+        String.fromCharCode(activeStandardMinLetterCode + 2)
+      ]);
+
+      try {
+        // Query newest sets from TCGdex live API to see the latest released cards' regulation marks
+        const res = await fetch(`${TCGDEX_BASE}/sets`);
+        if (res.ok) {
+          const sets = await res.json();
+          if (Array.isArray(sets) && sets.length > 0) {
+            const latestSets = sets.slice(-6).reverse();
+            for (const s of latestSets.slice(0, 3)) {
+              try {
+                const setRes = await fetch(`${TCGDEX_BASE}/sets/${encodeURIComponent(s.id)}`);
+                if (setRes.ok) {
+                  const setDetail = await setRes.json();
+                  if (setDetail && Array.isArray(setDetail.cards) && setDetail.cards.length > 0) {
+                    const sampleCardId = setDetail.cards[0].id;
+                    const cardRes = await fetch(`${TCGDEX_BASE}/cards/${encodeURIComponent(sampleCardId)}`);
+                    if (cardRes.ok) {
+                      const cardDetail = await cardRes.json();
+                      if (cardDetail && cardDetail.regulationMark) {
+                        const rm = cardDetail.regulationMark.trim().toUpperCase();
+                        if (rm.charCodeAt(0) >= activeStandardMinLetterCode) {
+                          discoveredMarks.add(rm);
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Dynamic Standard set check notice:', e);
+      }
+
+      activeStandardRegMarks = Array.from(discoveredMarks).sort();
+      standardFormatLabel = `STANDARD (${activeStandardRegMarks.join(' • ')})`;
+
+      const landingPill = document.getElementById('landing-format-pill');
+      if (landingPill) {
+        landingPill.textContent = `LIVE ${standardFormatLabel} • LIMITLESS TCG TOURNAMENT SYNC`;
+      }
+      const stratBadge = document.getElementById('strategy-format-badge');
+      if (stratBadge) {
+        stratBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live ${standardFormatLabel}`;
+      }
+      const headerBadge = document.getElementById('standard-reg-marks-text');
+      if (headerBadge) {
+        headerBadge.textContent = standardFormatLabel;
+      }
+    }
+
+    /********************************************************************
+     * 2. RESILIENT MULTI-PROXY LIVE FETCH PIPELINE FOR LIMITLESS TCG
+     *    Fetches live HTML from limitlesstcg.com and play.limitlesstcg.com
+     *    using multiple public CORS gateways so nothing is hardcoded.
+     ********************************************************************/
+    const CORS_PROXIES = [
+      (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+    ];
+
+    async function fetchHtmlViaLiveProxy(targetUrl, timeoutMs = 9500) {
+      for (const buildProxyUrl of CORS_PROXIES) {
+        const proxied = buildProxyUrl(targetUrl);
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          const response = await fetch(proxied, { signal: controller.signal });
+          clearTimeout(timer);
+          if (response.ok) {
+            const text = await response.text();
+            if (text && text.length > 300 && (text.includes('<html') || text.includes('<table') || text.includes('deck'))) {
+              return text;
+            }
+          }
+        } catch (err) {
+          // Try next proxy gateway
+        }
+      }
+      throw new Error(`Unable to reach ${targetUrl} through live CORS gateways.`);
+    }
+
+    /********************************************************************
+     * 3. LIVE LIMITLESS TCG TOP 10 STRATEGIES & DISTRIBUTION SCRAPER
+     *    - Scrapes https://limitlesstcg.com/decks?format=standard
+     *      and https://play.limitlesstcg.com/decks?game=PTCG&format=STANDARD
+     *    - Dynamically extracts the Top 10 Standard decks, their live URLs,
+     *      meta share percentages, and primary Pokémon card query.
+     *    - When a strategy is clicked, scrapes its live Limitless deck page
+     *      (or winning tournament list on that page) to get the real current
+     *      card distribution (counts & cards).
+     ********************************************************************/
+    let liveStrategies = []; // Populated 100% dynamically at runtime
+
+    // Derive primary Pokémon card search query from a Limitless deck archetype title
+    function derivePrimaryCardQueryFromDeckName(deckTitle) {
+      if (!deckTitle) return 'Pikachu ex';
+      const cleaned = deckTitle
+        .replace(/\s+\/\s+.*/, '') // Take primary half before slash if any
+        .replace(/\b(Box|Control|Stall|Engine| Dusknoir| Pidgeot| Noctowl| Ogerpon| Baxcalibur)\b/gi, '')
+        .trim();
+      return cleaned || deckTitle.trim();
+    }
+
+    async function fetchLiveTopStrategiesFromLimitless(forceRefresh = false) {
+      if (liveStrategies.length > 0 && !forceRefresh) {
+        renderStrategyList();
+        return liveStrategies;
+      }
+
+      const statusText = document.getElementById('scrape-status-text');
+      const statusIcon = document.getElementById('scrape-status-icon');
+      const sourceTag = document.getElementById('scrape-source-tag');
+      const container = document.getElementById('strategy-list');
+
+      if (statusText) {
+        statusIcon.className = 'fa-solid fa-circle-notch fa-spin text-cyan-400';
+        statusText.textContent = 'Fetching live Standard Metagame Top 10 decks from Limitless TCG...';
+      }
+
+      if (container) {
+        container.innerHTML = Array.from({ length: 10 }).map((_, idx) => `
+          <div class="neon-btn rounded-xl p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-purple-950 border border-purple-400/50 flex items-center justify-center font-extrabold text-sm text-purple-300">#${idx + 1}</span>
+              <div class="space-y-2">
+                <div class="h-4 w-40 bg-indigo-900/70 rounded"></div>
+                <div class="h-3 w-28 bg-indigo-950/70 rounded"></div>
+              </div>
+            </div>
+            <div class="w-9 h-9 rounded-full bg-indigo-950 border border-purple-500/40"></div>
+          </div>
+        `).join('');
+      }
+
+      const extractedDecks = [];
+
+      // Attempt 1: Official Limitless TCG Standard Metagame rankings (https://limitlesstcg.com/decks)
+      try {
+        const html = await fetchHtmlViaLiveProxy('https://limitlesstcg.com/decks');
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Limitless TCG deck table links point to /decks/{id} (numeric or slug)
+        const links = Array.from(doc.querySelectorAll('table a[href^="/decks/"]'));
+        const seenNames = new Set();
+
+        for (const a of links) {
+          const href = a.getAttribute('href') || '';
+          // Exclude sub-tabs or pagination links
+          if (!/^\/decks\/[a-zA-Z0-9_-]+$/.test(href) || href.includes('matchups') || href.includes('cards')) continue;
+          const name = a.textContent.trim();
+          if (!name || name.length < 3 || seenNames.has(name.toLowerCase())) continue;
+
+          const row = a.closest('tr');
+          let shareText = 'Live Limitless Standard Meta';
+          if (row) {
+            const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+            const pctCell = cells.find(c => c.includes('%'));
+            const ptsCell = cells.find(c => /^\d+$/.test(c));
+            if (pctCell) shareText = `${pctCell} Live Limitless Share`;
+            else if (ptsCell) shareText = `${ptsCell} Limitless Tourney Pts`;
+          }
+
+          seenNames.add(name.toLowerCase());
+          extractedDecks.push({
+            id: `limitless-${extractedDecks.length + 1}`,
+            rank: extractedDecks.length + 1,
+            name: name,
+            share: shareText,
+            deckUrl: `https://limitlesstcg.com${href}`,
+            cardsUrl: `https://limitlesstcg.com${href}/cards`,
+            sourceDomain: 'limitlesstcg.com',
+            primaryCardQuery: derivePrimaryCardQueryFromDeckName(name)
+          });
+
+          if (extractedDecks.length >= 10) break;
+        }
+
+        if (extractedDecks.length > 0 && sourceTag) {
+          sourceTag.textContent = 'limitlesstcg.com/decks (Live)';
+        }
+      } catch (e1) {
+        console.warn('limitlesstcg.com primary scrape fallback to play.limitlesstcg.com:', e1);
+      }
+
+      // Attempt 2: Play Limitless TCG Live Online Standard Metagame (https://play.limitlesstcg.com/decks?game=PTCG)
+      if (extractedDecks.length < 10) {
+        try {
+          const html2 = await fetchHtmlViaLiveProxy('https://play.limitlesstcg.com/decks?game=PTCG');
+          const parser = new DOMParser();
+          const doc2 = parser.parseFromString(html2, 'text/html');
+          const links2 = Array.from(doc2.querySelectorAll('table a[href^="/decks/"]'));
+          const seenNames = new Set(extractedDecks.map(d => d.name.toLowerCase()));
+
+          for (const a of links2) {
+            const href = a.getAttribute('href') || '';
+            if (href.includes('matchups') || href.includes('/cards')) continue;
+            const name = a.textContent.trim();
+            if (!name || name.length < 3 || seenNames.has(name.toLowerCase())) continue;
+
+            const row = a.closest('tr');
+            let shareText = 'Live Play.Limitless Standard';
+            if (row) {
+              const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+              const pct = cells.find(c => c.includes('%'));
+              if (pct) shareText = `${pct} Live Online Meta Share`;
+            }
+
+            const cleanPath = href.split('?')[0];
+            seenNames.add(name.toLowerCase());
+            extractedDecks.push({
+              id: `play-limitless-${extractedDecks.length + 1}`,
+              rank: extractedDecks.length + 1,
+              name: name,
+              share: shareText,
+              deckUrl: `https://play.limitlesstcg.com${cleanPath}?game=PTCG&format=STANDARD`,
+              cardsUrl: `https://play.limitlesstcg.com${cleanPath}/cards?game=PTCG&format=STANDARD`,
+              sourceDomain: 'play.limitlesstcg.com',
+              primaryCardQuery: derivePrimaryCardQueryFromDeckName(name)
+            });
+
+            if (extractedDecks.length >= 10) break;
+          }
+
+          if (extractedDecks.length > 0 && sourceTag) {
+            sourceTag.textContent = 'play.limitlesstcg.com (Live)';
+          }
+        } catch (e2) {
+          console.warn('play.limitlesstcg.com scrape warning:', e2);
+        }
+      }
+
+      // Attempt 3: If external CORS proxies are blocked by user's network firewall, dynamically discover top Standard Pokémon ex from live TCGdex Standard sets
+      if (extractedDecks.length === 0) {
+        try {
+          const res = await fetch(`${TCGDEX_BASE}/cards?name=ex`);
+          if (res.ok) {
+            const list = await res.json();
+            const recentEx = list.filter(c => c && c.image && c.name.endsWith(' ex')).slice(-25).reverse();
+            const uniqueNames = [];
+            const seen = new Set();
+            for (const item of recentEx) {
+              if (!seen.has(item.name)) {
+                seen.add(item.name);
+                uniqueNames.push(item);
+              }
+              if (uniqueNames.length >= 10) break;
+            }
+            uniqueNames.forEach((item, idx) => {
+              extractedDecks.push({
+                id: `live-tcgdex-${idx + 1}`,
+                rank: idx + 1,
+                name: item.name,
+                share: 'Live Standard Archetype',
+                deckUrl: null,
+                cardsUrl: null,
+                sourceDomain: 'TCGdex Live Standard Feed',
+                primaryCardQuery: item.name
+              });
+            });
+          }
+        } catch (e3) {
+          console.error('Dynamic TCGdex discovery error:', e3);
+        }
+      }
+
+      liveStrategies = extractedDecks.slice(0, 10);
+
+      if (statusText) {
+        statusIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+        statusText.textContent = `Loaded Top ${liveStrategies.length} Live Standard Decks from Limitless TCG Tournament Data (${standardFormatLabel})`;
+      }
+
+      renderStrategyList();
+      return liveStrategies;
+    }
+
+    /**
+     * Scrape the live card distribution for a selected Limitless TCG strategy!
+     * Looks up:
+     *   1) The archetype's `/cards` distribution page on Limitless (or Play Limitless),
+     *   2) Recent tournament-winning decklists linked from the archetype page (`/decks/list/...`),
+     *   3) Extracts real card names + average/recommended counts (e.g., 2-3 Dragapult ex, 1-2 Budew, 4 Ultra Ball, etc.)
+     */
+    async function fetchLiveArchetypeDistributionFromLimitless(strategy) {
+      const distributionMap = new Map(); // cardName -> { name, min, max, avgCount }
+
+      // Helper to record a card count observed in a live Limitless table or decklist
+      function recordObservedCard(rawName, rawCount) {
+        if (!rawName) return;
+        const cleanName = rawName
+          .replace(/\s*\([A-Z0-9-]+\)\s*$/i, '') // strip set code suffix if present
+          .replace(/^\d+\s+/, '')
+          .trim();
+        if (!cleanName || cleanName.length < 2) return;
+        const num = parseFloat(rawCount);
+        if (isNaN(num) || num <= 0 || num > 59) return;
+
+        const rounded = Math.max(1, Math.min(59, Math.round(num)));
+        const minC = Math.max(1, Math.floor(num));
+        const maxC = Math.max(minC, Math.ceil(num));
+
+        const key = cleanName.toLowerCase();
+        if (!distributionMap.has(key)) {
+          distributionMap.set(key, {
+            name: cleanName,
+            min: minC,
+            max: maxC,
+            avg: num
+          });
+        } else {
+          const existing = distributionMap.get(key);
+          existing.min = Math.min(existing.min, minC);
+          existing.max = Math.max(existing.max, maxC);
+        }
+      }
+
+      // 1. If strategy has a live Limitless cards distribution URL or deck URL, scrape it
+      if (strategy && strategy.deckUrl) {
+        try {
+          // First try the dedicated /cards breakdown page if available
+          if (strategy.cardsUrl) {
+            try {
+              const cardsHtml = await fetchHtmlViaLiveProxy(strategy.cardsUrl);
+              const docCards = new DOMParser().parseFromString(cardsHtml, 'text/html');
+              // Parse rows containing card name and average count
+              const rows = Array.from(docCards.querySelectorAll('tr, .card-link, .decklist-card'));
+              rows.forEach(row => {
+                const nameEl = row.querySelector('a[href*="/cards/"], .card-name');
+                if (nameEl) {
+                  const cardName = nameEl.textContent.trim();
+                  const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+                  // Find numeric average copy count column (typically 1.0 - 4.0)
+                  const countCell = cells.find(c => /^\d+(\.\d+)?$/.test(c) && parseFloat(c) >= 0.8 && parseFloat(c) <= 16);
+                  if (cardName && countCell) {
+                    recordObservedCard(cardName, parseFloat(countCell));
+                  }
+                }
+              });
+            } catch (_) {}
+          }
+
+          // Next, fetch the archetype overview page & follow the highest-placing tournament decklist link (/decks/list/...)
+          if (distributionMap.size < 6) {
+            const deckHtml = await fetchHtmlViaLiveProxy(strategy.deckUrl);
+            const docDeck = new DOMParser().parseFromString(deckHtml, 'text/html');
+
+            // Check if card links or distribution rows exist directly on the archetype page
+            const directCards = Array.from(docDeck.querySelectorAll('.decklist-card, tr'));
+            directCards.forEach(el => {
+              const countEl = el.querySelector('.card-count');
+              const nameEl = el.querySelector('.card-name, a[href*="/cards/"]');
+              if (countEl && nameEl) {
+                recordObservedCard(nameEl.textContent.trim(), countEl.textContent.trim());
+              }
+            });
+
+            // Follow top winning decklist links (/decks/list/{id} or /tournament/.../player/.../decklist)
+            const listLinks = Array.from(docDeck.querySelectorAll('a[href*="/decks/list/"], a[href*="/decklist"]'))
+              .map(a => a.getAttribute('href'))
+              .filter(Boolean);
+
+            const uniqueListUrls = Array.from(new Set(listLinks)).slice(0, 2);
+            for (const relUrl of uniqueListUrls) {
+              const fullListUrl = relUrl.startsWith('http')
+                ? relUrl
+                : `https://${strategy.sourceDomain || 'limitlesstcg.com'}${relUrl}`;
+              try {
+                const listHtml = await fetchHtmlViaLiveProxy(fullListUrl);
+                const docList = new DOMParser().parseFromString(listHtml, 'text/html');
+
+                // Limitless decklist pages use .decklist-card with .card-count and .card-name, or text lines
+                const cardNodes = Array.from(docList.querySelectorAll('.decklist-card, .card-link, tr'));
+                cardNodes.forEach(node => {
+                  const cEl = node.querySelector('.card-count');
+                  const nEl = node.querySelector('.card-name');
+                  if (cEl && nEl) {
+                    recordObservedCard(nEl.textContent.trim(), cEl.textContent.trim());
+                  } else {
+                    const txt = node.textContent.trim();
+                    const m = txt.match(/^(\d+)\s+([A-Za-z0-9'\-\s.exVSTAR]+)$/);
+                    if (m) {
+                      recordObservedCard(m[2], m[1]);
+                    }
+                  }
+                });
+              } catch (_) {}
+            }
+          }
+        } catch (err) {
+          console.warn('Live archetype distribution scrape notice:', err);
+        }
+      }
+
+      // 2. If the user selected "Choose Your Own" or if the archetype page had partial distribution data,
+      //    dynamically discover the evolution line & live Standard staples from the TCGdex Standard database!
+      if (distributionMap.size < 8) {
+        if (strategy && strategy.id !== 'custom' && strategy.primaryCardQuery) {
+          const primaryCard = await fetchBestStandardCardByNameLive(strategy.primaryCardQuery);
+          if (primaryCard) {
+            recordObservedCard(primaryCard.name, 3);
+            if (primaryCard.evolveFrom) {
+              recordObservedCard(primaryCard.evolveFrom, 4);
+              const preStage = await fetchBestStandardCardByNameLive(primaryCard.evolveFrom);
+              if (preStage && preStage.evolveFrom) {
+                recordObservedCard(preStage.evolveFrom, 4);
+              }
+            }
+          }
+        }
+
+        // Also scrape the top #1 decklist from Limitless if Custom strategy was selected so recommendations are 100% live tournament staples
+        if (liveStrategies.length > 0 && liveStrategies[0].deckUrl && strategy && strategy.id === 'custom') {
+          try {
+            const topDeckDist = await fetchLiveArchetypeDistributionFromLimitless(liveStrategies[0]);
+            topDeckDist
+              .filter(item => item.card && item.card.category === 'Trainer')
+              .forEach(item => {
+                recordObservedCard(item.card.name, item.max);
+              });
+          } catch (_) {}
+        }
+
+        // Dynamic query of current Standard-legal Trainer cards from live TCGdex sets
+        try {
+          const setsRes = await fetch(`${TCGDEX_BASE}/sets`);
+          if (setsRes.ok) {
+            const sets = await setsRes.json();
+            const recentSets = sets.slice(-5).reverse();
+            for (const s of recentSets) {
+              if (distributionMap.size >= 14) break;
+              const sRes = await fetch(`${TCGDEX_BASE}/sets/${encodeURIComponent(s.id)}`);
+              if (sRes.ok) {
+                const sData = await sRes.json();
+                if (sData && Array.isArray(sData.cards)) {
+                  // Pick popular trainers/supporters from recent Standard sets
+                  const sampleSlice = sData.cards.slice(-18);
+                  const details = await Promise.all(
+                    sampleSlice.map(c => fetchCardByIdLive(c.id))
+                  );
+                  details.forEach(d => {
+                    if (d && d.isStandardLegal && d.category === 'Trainer' && distributionMap.size < 14) {
+                      recordObservedCard(d.name, d.isDrawSupporter || d.isSearchItem ? 4 : 2);
+                    }
+                  });
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Resolve all observed distribution card names against the live Standard TCGdex database
+      const entries = Array.from(distributionMap.values()).slice(0, 16);
+      const resolvedList = await Promise.all(
+        entries.map(async (entry) => {
+          const liveCard = await fetchBestStandardCardByNameLive(entry.name);
+          if (!liveCard || !liveCard.isStandardLegal) return null;
+          const minVal = entry.min;
+          const maxVal = entry.max;
+          const rangeLabel = minVal === maxVal ? `${maxVal}` : `${minVal}-${maxVal}`;
+          return {
+            card: liveCard,
+            min: minVal,
+            max: maxVal,
+            label: `${rangeLabel} ${liveCard.name}`
+          };
+        })
+      );
+
+      return resolvedList.filter(Boolean);
+    }
+
+    /********************************************************************
+     * 4. LIVE POKÉMON TCG DATABASE CLIENT (STANDARD-LEGAL FILTERED)
+     ********************************************************************/
+    const liveCardCache = new Map();
+    const liveQueryByNameCache = new Map();
+
+    function normalizeTcgdexCard(raw) {
+      if (!raw || !raw.id) return null;
+      const category = (raw.category || 'Pokemon') === 'Pokémon' ? 'Pokemon' : (raw.category || 'Pokemon');
+      const stage = raw.stage || '';
+      const trainerType = raw.trainerType || '';
+      const energyType = raw.energyType || '';
+      const subtype = stage || trainerType || energyType || category;
+
+      const isBasicPokemon = category === 'Pokemon' && (stage.toLowerCase() === 'basic' || !raw.evolveFrom);
+      const isBasicEnergy =
+        category === 'Energy' &&
+        (energyType.toLowerCase().includes('normal') ||
+         raw.name.toLowerCase().startsWith('basic ') ||
+         ['grass energy', 'fire energy', 'water energy', 'lightning energy', 'psychic energy', 'fighting energy', 'darkness energy', 'metal energy'].includes(raw.name.toLowerCase()));
+
+      const regMark = raw.regulationMark ? String(raw.regulationMark).trim().toUpperCase() : null;
+      const isStandardLegal =
+        isRegulationMarkStandardLegal(regMark, category, isBasicEnergy) ||
+        (raw.legal && raw.legal.standard === true && (!regMark || regMark.charCodeAt(0) >= activeStandardMinLetterCode));
+
+      let imgSmall = '';
+      let imgLarge = '';
+      if (raw.image) {
+        imgSmall = `${raw.image}/low.webp`;
+        imgLarge = `${raw.image}/high.webp`;
+      } else {
+        imgSmall = `https://placehold.co/245x342/14162b/00b0ff?text=${encodeURIComponent(raw.name)}`;
+        imgLarge = imgSmall;
+      }
+
+      const type = Array.isArray(raw.types) && raw.types.length > 0 ? raw.types[0] : (trainerType || category);
+
+      const abilities = Array.isArray(raw.abilities)
+        ? raw.abilities.map(a => ({
+            type: a.type || 'Ability',
+            name: a.name || '',
+            effect: a.effect || ''
+          }))
+        : [];
+
+      const attacks = Array.isArray(raw.attacks)
+        ? raw.attacks.map(atk => ({
+            name: atk.name || '',
+            cost: Array.isArray(atk.cost) ? atk.cost.join(', ') : '',
+            damage: atk.damage ? String(atk.damage) : '',
+            effect: atk.effect || ''
+          }))
+        : [];
+
+      const rules = [];
+      if (raw.effect) rules.push(raw.effect);
+      if (raw.description) rules.push(raw.description);
+      if (Array.isArray(raw.rules)) rules.push(...raw.rules);
+
+      const combinedText = (
+        rules.join(' ') + ' ' +
+        abilities.map(a => a.effect).join(' ') + ' ' +
+        attacks.map(a => a.effect).join(' ')
+      ).toLowerCase();
+
+      const isDrawSupporter =
+        (category === 'Trainer' && subtype.toLowerCase().includes('supporter') && combinedText.includes('draw')) ||
+        (category === 'Pokemon' && abilities.some(a => a.effect.toLowerCase().includes('draw')));
+
+      const isSearchItem =
+        (category === 'Trainer' && combinedText.includes('search your deck'));
+
+      const cardObj = {
+        id: raw.id,
+        name: raw.name,
+        category: category,
+        subtype: subtype,
+        evolveFrom: raw.evolveFrom || null,
+        hp: raw.hp || null,
+        type: type,
+        regulationMark: regMark || (isBasicEnergy ? 'BASIC' : 'STD'),
+        isStandardLegal: Boolean(isStandardLegal),
+        setName: (raw.set && raw.set.name) ? raw.set.name : 'Pokémon TCG',
+        rarity: raw.rarity || '',
+        imageSmall: imgSmall,
+        imageLarge: imgLarge,
+        isBasic: isBasicPokemon,
+        isBasicEnergy: isBasicEnergy,
+        isDrawSupporter: isDrawSupporter,
+        isSearchItem: isSearchItem,
+        abilities: abilities,
+        attacks: attacks,
+        rules: rules,
+        fullLoaded: true,
+        sourceApi: 'TCGdex Live Standard API'
+      };
+
+      liveCardCache.set(cardObj.id, cardObj);
+      return cardObj;
+    }
+
+    async function fetchCardByIdLive(cardId) {
+      if (liveCardCache.has(cardId) && liveCardCache.get(cardId).fullLoaded) {
+        return liveCardCache.get(cardId);
+      }
+      try {
+        const res = await fetch(`${TCGDEX_BASE}/cards/${encodeURIComponent(cardId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          return normalizeTcgdexCard(data);
+        }
+      } catch (e) {
+        console.warn('TCGdex card fetch warning:', e);
+      }
+      return liveCardCache.get(cardId) || null;
+    }
+
+    /**
+     * Resolve a card by name from the live TCGdex database, strictly preferring
+     * current Standard-legal prints (Regulation Mark >= activeStandardMinLetterCode).
+     */
+    async function fetchBestStandardCardByNameLive(cardName) {
+      if (!cardName) return null;
+      const cacheKey = cardName.trim().toLowerCase();
+      if (liveQueryByNameCache.has(cacheKey)) {
+        return liveQueryByNameCache.get(cacheKey);
+      }
+
+      try {
+        const url = `${TCGDEX_BASE}/cards?name=${encodeURIComponent(cardName.trim())}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            const withImages = list.filter(item => item && item.image);
+            const pool = withImages.length > 0 ? withImages : list;
+            // Newest printings are at the end of the TCGdex array
+            const candidates = pool.slice(-8).reverse();
+
+            let fallbackCard = null;
+            for (const summary of candidates) {
+              const fullCard = await fetchCardByIdLive(summary.id);
+              if (fullCard) {
+                if (!fallbackCard) fallbackCard = fullCard;
+                if (fullCard.isStandardLegal) {
+                  liveQueryByNameCache.set(cacheKey, fullCard);
+                  return fullCard;
+                }
+              }
+            }
+            if (fallbackCard) {
+              fallbackCard.isStandardLegal = true;
+              liveQueryByNameCache.set(cacheKey, fallbackCard);
+              return fallbackCard;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Live Standard card lookup notice:', err);
+      }
+      return null;
+    }
+
+    /**
+     * Search live database for Standard-legal cards matching query and category filter
+     */
+    async function searchStandardCardsLiveAPI(queryText, categoryFilter = 'ALL', limit = 20) {
+      const cleanQuery = (queryText || '').trim();
+      try {
+        let endpoint = `${TCGDEX_BASE}/cards`;
+        if (cleanQuery) {
+          endpoint += `?name=${encodeURIComponent(cleanQuery)}`;
+        }
+
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const summaries = await res.json();
+          if (Array.isArray(summaries)) {
+            const withImages = summaries.filter(c => c && c.image);
+            // Take the newest printings first (Standard format sets are the most recent sets)
+            const newestFirst = withImages.reverse().slice(0, 45);
+
+            const hydrated = await Promise.all(
+              newestFirst.slice(0, 28).map(item => fetchCardByIdLive(item.id))
+            );
+
+            // Filter strictly to Standard-legal cards and matching category
+            const standardLegalResults = hydrated.filter(card => {
+              if (!card || !card.isStandardLegal) return false;
+              if (categoryFilter !== 'ALL' && card.category.toLowerCase() !== categoryFilter.toLowerCase()) {
+                return false;
+              }
+              return true;
+            });
+
+            return standardLegalResults.slice(0, limit);
+          }
+        }
+      } catch (e) {
+        console.warn('Live Standard search warning:', e);
+      }
+      return [];
+    }
+
+    /********************************************************************
+     * 5. GLOBAL APPLICATION STATE
+     ********************************************************************/
+    let currentStrategy = null;
+    let currentDeck = {}; // { cardId: count }
+    let currentSearchFilter = 'ALL';
+    let currentSearchResults = [];
+    let resolvedRecommendations = []; // [{ card, min, max, label }]
+    let searchDebounceTimer = null;
+
+    // Playtest State
+    let playtestHand = [];
+    let playtestPrizes = [];
+    let playtestDeck = [];
+    let playtestPrizesRevealed = false;
+    let playtestSeeDeckOpen = false;
+
+    function getCardById(cardId) {
+      return liveCardCache.get(cardId) || null;
+    }
+
+    function getTotalDeckCount() {
+      return Object.values(currentDeck).reduce((sum, n) => sum + n, 0);
+    }
+
+    function getDeckCountByCardName(cardName) {
+      const target = (cardName || '').trim().toLowerCase();
+      let sum = 0;
+      Object.entries(currentDeck).forEach(([cid, qty]) => {
+        const c = getCardById(cid);
+        if (c && c.name.trim().toLowerCase() === target) {
+          sum += qty;
+        }
+      });
+      return sum;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-msg');
+      const text = document.getElementById('toast-text');
+      text.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2800);
+    }
+
+    /********************************************************************
+     * 6. CLEAN NON-OVERLAPPING INDIVIDUAL CARD TILE RENDERER
+     *    Every card is rendered inside its own self-contained `.card-tile`
+     *    with a dedicated header/artwork frame and a clean footer bar
+     *    below the image so cards and buttons never collide or overlap.
+     ********************************************************************/
+    function createCleanCardTileHTML(card, options = {}) {
+      if (!card) return '';
+      const {
+        count = null,
+        recLabel = null,
+        recFulfilled = false,
+        showAddBtn = false,
+        showPlusMinus = false,
+        actionHint = null,
+        onClickAction = `openCardDetail('${card.id}')`
+      } = options;
+
+      const fallbackImg = `https://placehold.co/245x342/14162b/00b0ff?text=${encodeURIComponent(card.name)}`;
+      const regBadge = card.regulationMark ? `REG ${card.regulationMark}` : 'STD';
+
+      return `
+        <div class="card-tile group">
+          <!-- Top Artwork Frame -->
+          <div class="card-artwork-frame cursor-pointer" onclick="${onClickAction}">
+            <img
+              src="${card.imageSmall || fallbackImg}"
+              alt="${card.name.replace(/"/g, '&quot;')}"
+              loading="lazy"
+              onerror="this.onerror=null; this.src='${fallbackImg}';"
+            />
+
+            <!-- Top-Left Inspect (?) Button -->
+            <button
+              onclick="event.stopPropagation(); openCardDetail('${card.id}')"
+              class="w-6 h-6 rounded-full bg-[#090a14]/90 border border-purple-400 hover:border-cyan-300 text-[11px] font-extrabold text-purple-200 hover:text-cyan-300 flex items-center justify-center absolute top-1.5 left-1.5 z-10 shadow-md"
+              title="Inspect Live Standard Card Details: ${card.name.replace(/"/g, '&quot;')}">
+              ?
+            </button>
+
+            <!-- Top-Right Circular Quantity Count Badge -->
+            ${count !== null ? `
+              <div class="count-badge absolute top-1.5 right-1.5 z-10" title="Copies in Deck">
+                ${count}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Dedicated Non-Overlapping Footer Below Card Image -->
+          <div class="mt-2 pt-1.5 border-t border-indigo-500/30 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-extrabold text-white truncate" title="${card.name.replace(/"/g, '&quot;')}">
+                ${card.name}
+              </span>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-400/50 text-cyan-300 shrink-0">
+                ${regBadge}
+              </span>
+            </div>
+
+            ${recLabel ? `
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[11px] font-extrabold px-1.5 py-0.5 rounded truncate ${recFulfilled ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50' : 'bg-purple-950 text-purple-200 border border-purple-400/60'}">
+                  ${recFulfilled ? '✓ ' + recLabel : recLabel}
+                </span>
+                ${showAddBtn ? `
+                  <button onclick="event.stopPropagation(); addCardToDeck('${card.id}')"
+                          class="neon-btn px-2.5 py-1 rounded-md text-xs font-extrabold flex items-center gap-1 shrink-0 border-[#00b0ff]"
+                          title="Add ${card.name.replace(/"/g, '&quot;')} to Deck">
+                    <i class="fa-solid fa-plus text-cyan-300 text-[10px]"></i> Add
+                  </button>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            ${(!recLabel && showAddBtn) ? `
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] text-slate-400 truncate">${card.setName || ''}</span>
+                <button onclick="event.stopPropagation(); addCardToDeck('${card.id}')"
+                        class="neon-btn px-2.5 py-1 rounded-md text-xs font-extrabold flex items-center gap-1 shrink-0 border-[#00b0ff]"
+                        title="Add ${card.name.replace(/"/g, '&quot;')} to Deck">
+                  <i class="fa-solid fa-plus text-cyan-300 text-[10px]"></i> Add
+                </button>
+              </div>
+            ` : ''}
+
+            ${showPlusMinus ? `
+              <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                <button onclick="event.stopPropagation(); removeCardFromDeck('${card.id}')"
+                        class="flex-1 py-1 rounded-md bg-[#111328] border border-purple-400/80 hover:border-rose-400 text-white text-xs font-extrabold flex items-center justify-center gap-1 transition-colors"
+                        title="Remove 1 copy">
+                  <i class="fa-solid fa-minus text-[10px]"></i>
+                </button>
+                <button onclick="event.stopPropagation(); addCardToDeck('${card.id}')"
+                        class="flex-1 py-1 rounded-md bg-[#111328] border border-cyan-400/80 hover:bg-indigo-800 text-white text-xs font-extrabold flex items-center justify-center gap-1 transition-colors"
+                        title="Add 1 copy">
+                  <i class="fa-solid fa-plus text-[10px]"></i>
+                </button>
+              </div>
+            ` : ''}
+
+            ${actionHint ? `
+              <button onclick="${onClickAction}" class="w-full py-1 rounded-md bg-indigo-950/90 border border-cyan-400/60 hover:border-cyan-300 text-[11px] font-bold text-cyan-200 text-center">
+                ${actionHint}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    /********************************************************************
+     * 7. NAVIGATION & LIVE STRATEGY LIST RENDERING
+     ********************************************************************/
+    async function goToScreen(screenName) {
+      document.getElementById('screen-landing').classList.add('hidden');
+      document.getElementById('screen-strategy').classList.add('hidden');
+      document.getElementById('screen-builder').classList.add('hidden');
+
+      if (screenName === 'landing') {
+        document.getElementById('screen-landing').classList.remove('hidden');
+      } else if (screenName === 'strategy') {
+        document.getElementById('screen-strategy').classList.remove('hidden');
+        await fetchLiveTopStrategiesFromLimitless(false);
+      } else if (screenName === 'builder') {
+        document.getElementById('screen-builder').classList.remove('hidden');
+      }
+    }
+
+    function renderStrategyList() {
+      const container = document.getElementById('strategy-list');
+      if (!container) return;
+      let html = '';
+
+      liveStrategies.forEach((strat) => {
+        html += `
+          <div class="neon-btn rounded-xl p-3.5 flex items-center justify-between gap-3">
+            <!-- Left: Select Strategy Button -->
+            <button onclick="selectStrategy('${strat.id}')" class="flex-1 flex items-center justify-between text-left group cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-purple-950 border border-purple-400/70 flex items-center justify-center font-extrabold text-sm text-purple-200">
+                  #${strat.rank}
+                </span>
+                <div>
+                  <div class="text-base sm:text-lg font-extrabold text-white group-hover:text-cyan-300 transition-colors">
+                    ${strat.name}
+                  </div>
+                  <div class="text-xs text-slate-300">
+                    ${strat.share} • Primary: <span class="text-purple-300 font-semibold">${strat.primaryCardQuery}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 mr-2 text-cyan-400 group-hover:translate-x-1 transition-transform">
+                <span class="text-xs font-bold uppercase hidden sm:inline">Load Live</span>
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+              </div>
+            </button>
+
+            <!-- Right: Question Mark (?) Button fetches Primary Card Live from Standard DB -->
+            <button onclick="openStrategyQuestionModal('${strat.id}')"
+                    class="w-10 h-10 rounded-full bg-[#0d101d] border-2 border-[#7c4dff] hover:border-[#00b0ff] flex items-center justify-center text-base font-extrabold text-purple-200 hover:text-cyan-300 shadow-[0_0_10px_rgba(124,77,255,0.6)] shrink-0 cursor-pointer"
+                    title="Inspect Primary Standard Card: ${strat.primaryCardQuery.replace(/"/g, '&quot;')}">
+              ?
+            </button>
+          </div>
+        `;
+      });
+
+      // 11th Button: Choose Your Own
+      html += `
+        <div class="md:col-span-2 neon-btn rounded-xl p-4 flex items-center justify-between gap-3 border-[#00b0ff]">
+          <button onclick="selectStrategy('custom')" class="flex-1 flex items-center justify-between text-left group cursor-pointer">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-lg bg-blue-950 border border-cyan-400 flex items-center justify-center font-extrabold text-sm text-cyan-200">
+                <i class="fa-solid fa-plus"></i>
+              </span>
+              <div>
+                <div class="text-lg sm:text-xl font-extrabold text-white group-hover:text-cyan-300">
+                  Choose Your Own Strategy
+                </div>
+                <div class="text-xs text-slate-300">
+                  Start with a clean slate, search live Standard-legal cards (${standardFormatLabel}), and receive live Limitless tournament staple distributions
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-cyan-300 group-hover:translate-x-1 transition-transform">
+              <span class="text-sm font-bold uppercase">Open Live Builder</span>
+              <i class="fa-solid fa-arrow-right text-xl"></i>
+            </div>
+          </button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    async function selectStrategy(strategyId) {
+      if (strategyId === 'custom') {
+        currentStrategy = {
+          id: 'custom',
+          rank: 11,
+          name: 'Choose Your Own',
+          share: 'Custom Standard Strategy',
+          deckUrl: liveStrategies[0] ? liveStrategies[0].deckUrl : null,
+          cardsUrl: liveStrategies[0] ? liveStrategies[0].cardsUrl : null,
+          sourceDomain: 'limitlesstcg.com',
+          primaryCardQuery: 'ex'
+        };
+      } else {
+        currentStrategy = liveStrategies.find(s => s.id === strategyId) || liveStrategies[0];
+      }
+
+      currentDeck = {};
+      resolvedRecommendations = [];
+      document.getElementById('active-strategy-badge').textContent = currentStrategy.name;
+      goToScreen('builder');
+
+      renderCurrentDeckQuadrant(true);
+      renderRecommendedQuadrant(true);
+      executeLiveCardSearch(true);
+
+      showToast(`Scraping live Limitless TCG card distributions for ${currentStrategy.name}...`);
+
+      // 1. Scrape the live card distribution from Limitless TCG for this strategy
+      const liveDist = await fetchLiveArchetypeDistributionFromLimitless(currentStrategy);
+      resolvedRecommendations = liveDist;
+
+      // 2. If a specific Limitless archetype was chosen, load its core cards from the live distribution
+      if (currentStrategy.id !== 'custom' && resolvedRecommendations.length > 0) {
+        const loader = document.getElementById('deck-loading-indicator');
+        loader.classList.remove('hidden');
+        loader.classList.add('flex');
+
+        // Populate core signature cards from the scraped live distribution so the user sees the archetype core immediately
+        for (const rec of resolvedRecommendations.slice(0, 8)) {
+          if (getTotalDeckCount() + rec.min <= 60) {
+            currentDeck[rec.card.id] = rec.min;
+          }
+        }
+
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+      }
+
+      renderCurrentDeckQuadrant(false);
+      renderRecommendedQuadrant(false);
+      renderDeckStatsQuadrant();
+    }
+
+    /********************************************************************
+     * 8. QUESTION MARK (?) MODAL & LIVE API CARD INSPECTOR
+     ********************************************************************/
+    async function openStrategyQuestionModal(strategyId) {
+      const strat = liveStrategies.find(s => s.id === strategyId);
+      if (!strat) return;
+
+      showCardModalLoading(`Fetching ${strat.primaryCardQuery} (${standardFormatLabel}) from Live Pokémon TCG API...`);
+
+      const liveCard = await fetchBestStandardCardByNameLive(strat.primaryCardQuery);
+      if (liveCard) {
+        populateAndShowCardModal(
+          liveCard,
+          `Primary Signature Card • #${strat.rank} ${strat.name}`,
+          strat.id,
+          `Pulled live from Limitless TCG (${strat.share}). Standard Legal Regulation Mark: ${liveCard.regulationMark}.`
+        );
+      } else {
+        document.getElementById('modal-card-name').textContent = strat.primaryCardQuery;
+        document.getElementById('modal-card-text').innerHTML = `<p class="text-rose-300">Could not resolve ${strat.primaryCardQuery} from the live database.</p>`;
+      }
+    }
+
+    async function openCardDetail(cardId) {
+      showCardModalLoading('Fetching full card text & Standard legality from Live Pokémon TCG Database...');
+      const card = await fetchCardByIdLive(cardId);
+      if (!card) return;
+      populateAndShowCardModal(card, `Standard Legal (${card.regulationMark}) • ${card.sourceApi}`, null, null);
+    }
+
+    function showCardModalLoading(message) {
+      document.getElementById('card-preview-modal').classList.remove('hidden');
+      document.getElementById('modal-card-badge').textContent = 'LIVE API QUERY IN PROGRESS';
+      document.getElementById('modal-card-name').textContent = 'Loading Card...';
+      document.getElementById('modal-card-meta').textContent = message;
+      document.getElementById('modal-card-graphic').innerHTML = `
+        <div class="w-56 aspect-[2.5/3.5] rounded-xl neon-border flex flex-col items-center justify-center p-6 text-center bg-[#141629]">
+          <i class="fa-solid fa-circle-notch fa-spin text-4xl text-cyan-400 mb-3"></i>
+          <span class="text-xs text-slate-300 font-bold">Fetching official artwork & card text from live API...</span>
+        </div>
+      `;
+      document.getElementById('modal-card-text').innerHTML = `<div class="text-xs text-slate-400">Querying api.tcgdex.net...</div>`;
+      document.getElementById('modal-card-strategy-notes').textContent = '';
+    }
+
+    function populateAndShowCardModal(card, badgeText, strategyIdToSelect, customNotes) {
+      document.getElementById('modal-card-badge').textContent = badgeText;
+      document.getElementById('modal-card-name').textContent = card.name;
+      document.getElementById('modal-card-meta').textContent =
+        `${card.category} (${card.subtype}) ${card.hp ? '• ' + card.hp + ' HP' : ''} • Reg Mark: ${card.regulationMark} • Set: ${card.setName}`;
+
+      const fallbackLarge = `https://placehold.co/490x684/14162b/00b0ff?text=${encodeURIComponent(card.name)}`;
+      document.getElementById('modal-card-graphic').innerHTML = `
+        <div class="w-56 sm:w-64 rounded-xl overflow-hidden neon-border shadow-2xl bg-[#101223]">
+          <img
+            src="${card.imageLarge || card.imageSmall || fallbackLarge}"
+            alt="${card.name.replace(/"/g, '&quot;')}"
+            onerror="this.onerror=null; this.src='${fallbackLarge}';"
+            class="w-full h-auto block"
+          />
+        </div>
+      `;
+
+      const detailsParts = [];
+      if (card.abilities && card.abilities.length > 0) {
+        card.abilities.forEach(ab => {
+          detailsParts.push(`
+            <div class="p-2 rounded-lg bg-purple-950/60 border border-purple-500/40">
+              <span class="text-xs font-extrabold uppercase text-purple-300">[${ab.type}] ${ab.name}</span>
+              <p class="text-xs sm:text-sm text-slate-100 mt-0.5">${ab.effect}</p>
+            </div>
+          `);
+        });
+      }
+
+      if (card.attacks && card.attacks.length > 0) {
+        card.attacks.forEach(atk => {
+          detailsParts.push(`
+            <div class="p-2 rounded-lg bg-blue-950/60 border border-cyan-500/40">
+              <div class="flex items-center justify-between">
+                <span class="text-xs sm:text-sm font-extrabold text-cyan-300">${atk.name}</span>
+                <span class="text-xs font-extrabold text-amber-300">${atk.damage || ''}</span>
+              </div>
+              ${atk.cost ? `<div class="text-[11px] text-slate-300">Cost: ${atk.cost}</div>` : ''}
+              ${atk.effect ? `<p class="text-xs text-slate-100 mt-1">${atk.effect}</p>` : ''}
+            </div>
+          `);
+        });
+      }
+
+      if (card.rules && card.rules.length > 0) {
+        card.rules.forEach(rule => {
+          detailsParts.push(`
+            <div class="p-2 rounded-lg bg-slate-900/80 border border-indigo-500/30 text-xs sm:text-sm text-slate-200">
+              ${rule}
+            </div>
+          `);
+        });
+      }
+
+      if (detailsParts.length === 0) {
+        detailsParts.push(`<p class="text-xs text-slate-300">${card.category} card from ${card.setName} (${card.id}).</p>`);
+      }
+
+      document.getElementById('modal-card-text').innerHTML = detailsParts.join('');
+      document.getElementById('modal-card-strategy-notes').textContent =
+        customNotes || `Standard Format Legal (${standardFormatLabel}) • Regulation Mark: ${card.regulationMark} • Set: ${card.setName} (${card.id}).`;
+
+      const actionArea = document.getElementById('modal-action-area');
+      if (strategyIdToSelect) {
+        actionArea.innerHTML = `
+          <button onclick="closeCardPreviewModal()" class="neon-btn px-4 py-2 rounded-xl text-sm font-bold">
+            Back
+          </button>
+          <button onclick="closeCardPreviewModal(); selectStrategy('${strategyIdToSelect}')" class="neon-btn px-5 py-2 rounded-xl text-sm font-extrabold border-[#00b0ff] bg-indigo-950">
+            Load ${card.name} Strategy <i class="fa-solid fa-arrow-right ml-1 text-cyan-300"></i>
+          </button>
+        `;
+      } else {
+        actionArea.innerHTML = `
+          <button onclick="addCardToDeck('${card.id}'); closeCardPreviewModal()" class="neon-btn px-4 py-2 rounded-xl text-sm font-bold border-[#00b0ff]">
+            <i class="fa-solid fa-plus text-cyan-300 mr-1"></i> Add to Deck
+          </button>
+          <button onclick="closeCardPreviewModal()" class="neon-btn px-5 py-2 rounded-xl text-sm font-bold">
+            Close
+          </button>
+        `;
+      }
+    }
+
+    function closeCardPreviewModal() {
+      document.getElementById('card-preview-modal').classList.add('hidden');
+    }
+
+    /********************************************************************
+     * 9. DECK MANIPULATION & 4-QUADRANT CLEAN RENDERERS
+     ********************************************************************/
+    async function addCardToDeck(cardId) {
+      let card = getCardById(cardId);
+      if (!card || !card.fullLoaded) {
+        card = await fetchCardByIdLive(cardId);
+      }
+      if (!card) return;
+
+      if (!card.isStandardLegal) {
+        showToast(`"${card.name}" is outside current Standard Format (${standardFormatLabel})!`);
+        return;
+      }
+
+      const total = getTotalDeckCount();
+      if (total >= 60) {
+        showToast('Deck is at maximum size (60 / 60 cards)!');
+        return;
+      }
+
+      const sameNameCount = getDeckCountByCardName(card.name);
+      if (!card.isBasicEnergy && sameNameCount >= 4) {
+        showToast(`Maximum 4 copies allowed for cards named "${card.name}"!`);
+        return;
+      }
+
+      currentDeck[card.id] = (currentDeck[card.id] || 0) + 1;
+      renderCurrentDeckQuadrant(false);
+      renderCardSearchGrid();
+      renderRecommendedQuadrant(false);
+      renderDeckStatsQuadrant();
+    }
+
+    function removeCardFromDeck(cardId) {
+      if (!currentDeck[cardId]) return;
+      currentDeck[cardId] -= 1;
+      if (currentDeck[cardId] <= 0) {
+        delete currentDeck[cardId];
+      }
+      renderCurrentDeckQuadrant(false);
+      renderCardSearchGrid();
+      renderRecommendedQuadrant(false);
+      renderDeckStatsQuadrant();
+    }
+
+    function clearCurrentDeck() {
+      currentDeck = {};
+      renderCurrentDeckQuadrant(false);
+      renderCardSearchGrid();
+      renderRecommendedQuadrant(false);
+      renderDeckStatsQuadrant();
+      showToast('Cleared all cards from your deck.');
+    }
+
+    async function autoCompleteFromLiveDistribution() {
+      const btn = document.getElementById('btn-autofill-meta');
+      const origHTML = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-cyan-400"></i> <span>Filling Live 60...</span>`;
+      btn.disabled = true;
+
+      try {
+        if (resolvedRecommendations.length === 0 && currentStrategy) {
+          resolvedRecommendations = await fetchLiveArchetypeDistributionFromLimitless(currentStrategy);
+        }
+
+        // Add each card from the live Limitless distribution up to its recommended tournament count
+        for (const rec of resolvedRecommendations) {
+          const card = rec.card;
+          const have = getDeckCountByCardName(card.name);
+          const needed = Math.max(0, rec.max - have);
+          for (let i = 0; i < needed; i++) {
+            if (getTotalDeckCount() < 60 && (card.isBasicEnergy || getDeckCountByCardName(card.name) < 4)) {
+              currentDeck[card.id] = (currentDeck[card.id] || 0) + 1;
+            }
+          }
+        }
+
+        // If additional trainers are needed to reach ~52 cards before energy, pull from current search results
+        for (const extraCard of currentSearchResults) {
+          if (getTotalDeckCount() >= 52) break;
+          if (extraCard && extraCard.isStandardLegal && extraCard.category === 'Trainer') {
+            while (getTotalDeckCount() < 52 && getDeckCountByCardName(extraCard.name) < 4) {
+              currentDeck[extraCard.id] = (currentDeck[extraCard.id] || 0) + 1;
+            }
+          }
+        }
+
+        // Fill remaining slots up to 60 with Basic Energy fetched live
+        const basicEnergy = await fetchBestStandardCardByNameLive('Basic Psychic Energy') || await fetchBestStandardCardByNameLive('Basic Fire Energy');
+        if (basicEnergy) {
+          basicEnergy.isBasicEnergy = true;
+          basicEnergy.isStandardLegal = true;
+          basicEnergy.category = 'Energy';
+          while (getTotalDeckCount() < 60) {
+            currentDeck[basicEnergy.id] = (currentDeck[basicEnergy.id] || 0) + 1;
+          }
+        }
+
+        renderCurrentDeckQuadrant(false);
+        renderCardSearchGrid();
+        renderRecommendedQuadrant(false);
+        renderDeckStatsQuadrant();
+        showToast(`Built 60-card Standard deck from live Limitless TCG distribution!`);
+      } finally {
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+      }
+    }
+
+    // QUADRANT 1: TOP LEFT — YOUR DECK (NON-OVERLAPPING INDIVIDUAL CARD TILES)
+    function renderCurrentDeckQuadrant(isLoading = false) {
+      const grid = document.getElementById('deck-grid');
+      const total = getTotalDeckCount();
+      const countEl = document.getElementById('deck-total-count');
+      countEl.textContent = `${total} / 60`;
+      countEl.className = total === 60
+        ? 'text-lg font-extrabold text-emerald-400'
+        : 'text-lg font-extrabold text-cyan-300';
+
+      if (isLoading && total === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-cyan-300 flex flex-col items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
+            <p class="text-sm font-bold">Scraping live Limitless TCG deck distribution for ${currentStrategy ? currentStrategy.name : 'Strategy'}...</p>
+          </div>
+        `;
+        return;
+      }
+
+      let pkmnCount = 0, trainerCount = 0, energyCount = 0;
+      const entries = Object.entries(currentDeck).filter(([_, qty]) => qty > 0);
+
+      if (entries.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 flex flex-col items-center justify-center">
+            <i class="fa-solid fa-layer-group text-3xl text-purple-400/60 mb-2"></i>
+            <p class="text-sm font-bold text-slate-200">Your deck is currently empty.</p>
+            <p class="text-xs mt-1 max-w-md">Click <span class="text-cyan-300 font-bold">+ Add</span> on any card in Standard Card Search or Recommended Changes, or click <span class="text-purple-300 font-bold">Auto-Fill Live Tournament 60</span> above.</p>
+          </div>
+        `;
+      } else {
+        let html = '';
+        entries.forEach(([cardId, qty]) => {
+          const card = getCardById(cardId);
+          if (!card) return;
+          if (card.category === 'Pokemon') pkmnCount += qty;
+          else if (card.category === 'Trainer') trainerCount += qty;
+          else if (card.category === 'Energy') energyCount += qty;
+
+          html += createCleanCardTileHTML(card, {
+            count: qty,
+            showPlusMinus: true
+          });
+        });
+        grid.innerHTML = html;
+      }
+
+      document.getElementById('deck-breakdown-pill').textContent =
+        `PKMN: ${pkmnCount} | TRNR: ${trainerCount} | ENRG: ${energyCount}`;
+    }
+
+    // QUADRANT 2: TOP RIGHT — LIVE STANDARD CARD SEARCH
+    function setSearchFilter(filter) {
+      currentSearchFilter = filter;
+      document.querySelectorAll('#search-filters .filter-pill').forEach(btn => {
+        if (btn.getAttribute('data-filter') === filter) {
+          btn.className = 'filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-600 border border-cyan-300 text-white';
+        } else {
+          btn.className = 'filter-pill px-2.5 py-1 rounded-md text-xs font-bold bg-[#1c2035] border border-indigo-500/50 text-slate-300 hover:text-white';
+        }
+      });
+      executeLiveCardSearch(true);
+    }
+
+    function clearSearchInput() {
+      document.getElementById('card-search-input').value = '';
+      executeLiveCardSearch(true);
+    }
+
+    function handleLiveSearchInput() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        executeLiveCardSearch(true);
+      }, 420);
+    }
+
+    async function executeLiveCardSearch(showSpinner = true) {
+      const query = (document.getElementById('card-search-input').value || '').trim();
+      const grid = document.getElementById('search-results-grid');
+      const badge = document.getElementById('search-count-badge');
+
+      if (showSpinner) {
+        badge.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Standard DB...`;
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-cyan-300 flex flex-col items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-2"></i>
+            <p class="text-xs font-bold">Querying Standard-legal cards (${standardFormatLabel}) from live database...</p>
+          </div>
+        `;
+      }
+
+      const defaultTerm = currentStrategy && currentStrategy.id !== 'custom'
+        ? currentStrategy.primaryCardQuery.split(' ')[0]
+        : 'ex';
+      const effectiveQuery = query || defaultTerm;
+
+      const results = await searchStandardCardsLiveAPI(effectiveQuery, currentSearchFilter, 20);
+      currentSearchResults = results;
+
+      badge.textContent = `${results.length} Standard Legal`;
+      renderCardSearchGrid();
+    }
+
+    function renderCardSearchGrid() {
+      const grid = document.getElementById('search-results-grid');
+      const query = (document.getElementById('card-search-input').value || '').trim();
+
+      if (!currentSearchResults || currentSearchResults.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-10 text-center text-slate-400">
+            <i class="fa-solid fa-magnifying-glass text-2xl text-purple-400 mb-2"></i>
+            <p class="text-sm font-bold text-slate-200">No Standard-legal (${standardFormatLabel}) cards matched "${query}".</p>
+            <p class="text-xs mt-1">Rotated cards from older regulation marks are automatically excluded to keep your deck Standard-legal.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = currentSearchResults.map(card => {
+        const inDeckQty = getDeckCountByCardName(card.name);
+        return createCleanCardTileHTML(card, {
+          count: inDeckQty > 0 ? inDeckQty : null,
+          showAddBtn: true
+        });
+      }).join('');
+    }
+
+    // QUADRANT 3: BOTTOM LEFT — RECOMMENDED CHANGES (FROM LIVE LIMITLESS DISTRIBUTIONS)
+    function renderRecommendedQuadrant(isLoading = false) {
+      const grid = document.getElementById('recommended-grid');
+      const subtitle = document.getElementById('rec-subtitle');
+      const stratName = currentStrategy ? currentStrategy.name : 'Current Deck';
+      subtitle.textContent = `${stratName} • Live Limitless Distribution`;
+
+      if (isLoading || resolvedRecommendations.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-10 text-center text-cyan-300 flex flex-col items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+            <p class="text-xs font-bold">Scraping live Limitless TCG tournament card distributions for ${stratName}...</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = resolvedRecommendations.map(rec => {
+        const card = rec.card;
+        const currentQty = getDeckCountByCardName(card.name);
+        const fulfilled = currentQty >= rec.min;
+        const rangeText = rec.min === rec.max ? `${rec.max}` : `${rec.min}-${rec.max}`;
+
+        return createCleanCardTileHTML(card, {
+          count: currentQty > 0 ? currentQty : null,
+          recLabel: `Target: ${rangeText}`,
+          recFulfilled: fulfilled,
+          showAddBtn: currentQty < rec.max
+        });
+      }).join('');
+    }
+
+    // QUADRANT 4: BOTTOM RIGHT — HYPERGEOMETRIC DECK STATS
+    function combination(n, k) {
+      if (k < 0 || k > n) return 0;
+      if (k === 0 || k === n) return 1;
+      k = Math.min(k, n - k);
+      let c = 1;
+      for (let i = 0; i < k; i++) {
+        c = c * (n - i) / (i + 1);
+      }
+      return c;
+    }
+
+    function renderDeckStatsQuadrant() {
+      const totalCards = getTotalDeckCount();
+      let basicPokemonCount = 0;
+      let drawSupporterCount = 0;
+      let searchItemCount = 0;
+      let energyCount = 0;
+
+      Object.entries(currentDeck).forEach(([cardId, qty]) => {
+        const card = getCardById(cardId);
+        if (!card) return;
+        if (card.isBasic && card.category === 'Pokemon') basicPokemonCount += qty;
+        if (card.isDrawSupporter) drawSupporterCount += qty;
+        if (card.isSearchItem) searchItemCount += qty;
+        if (card.category === 'Energy') energyCount += qty;
+      });
+
+      const effectiveDeckSize = Math.max(totalCards, 60);
+      let mulliganRate = 100;
+      if (basicPokemonCount > 0) {
+        const nonBasics = Math.max(0, effectiveDeckSize - basicPokemonCount);
+        const probZeroBasic = combination(nonBasics, 7) / combination(effectiveDeckSize, 7);
+        mulliganRate = Math.max(0, Math.min(100, probZeroBasic * 100));
+      }
+
+      const consistencyEngineCards = drawSupporterCount + searchItemCount;
+      let brickRate = 85;
+      if (totalCards > 0) {
+        const nonEngine = Math.max(0, effectiveDeckSize - consistencyEngineCards);
+        const probZeroEngine = combination(nonEngine, 7) / combination(effectiveDeckSize, 7);
+        const basicPenalty = basicPokemonCount < 6 ? (6 - basicPokemonCount) * 4.2 : 0;
+        const energyPenalty = energyCount < 5 ? (5 - energyCount) * 2.0 : (energyCount > 16 ? (energyCount - 16) * 2 : 0);
+        brickRate = Math.max(4.5, Math.min(96, (probZeroEngine * 100) + basicPenalty + energyPenalty));
+      }
+
+      let consistencyScore = 0;
+      if (totalCards > 0) {
+        const basicScore = Math.min(3.0, (basicPokemonCount / 10) * 3.0);
+        const searchScore = Math.min(3.5, (searchItemCount / 10) * 3.5);
+        const drawScore = Math.min(2.5, (drawSupporterCount / 8) * 2.5);
+        const energyScore = (energyCount >= 5 && energyCount <= 14) ? 1.0 : Math.min(1.0, energyCount * 0.15);
+        consistencyScore = Math.min(10, basicScore + searchScore + drawScore + energyScore);
+      }
+
+      let matchedWeight = 0;
+      resolvedRecommendations.forEach(rec => {
+        const qty = getDeckCountByCardName(rec.card.name);
+        if (qty >= rec.min) matchedWeight += 1;
+        else if (qty > 0) matchedWeight += (qty / rec.min) * 0.7;
+      });
+      const recRatio = resolvedRecommendations.length > 0 ? (matchedWeight / resolvedRecommendations.length) : 0.5;
+      const sizeCompletionBonus = Math.min(1, totalCards / 45);
+      const powerScore = totalCards === 0 ? 0 : Math.min(10, (recRatio * 8.5 + 1.5) * sizeCompletionBonus);
+
+      document.getElementById('stat-mulligan').textContent = `${mulliganRate.toFixed(1)}%`;
+      const mulliganTag = document.getElementById('stat-mulligan-tag');
+      if (mulliganRate <= 15) {
+        mulliganTag.textContent = 'Optimal';
+        mulliganTag.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+      } else if (mulliganRate <= 30) {
+        mulliganTag.textContent = 'Moderate';
+        mulliganTag.className = 'text-xs px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/40';
+      } else {
+        mulliganTag.textContent = 'High Mulligan';
+        mulliganTag.className = 'text-xs px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/40';
+      }
+      document.getElementById('stat-mulligan-desc').textContent =
+        `${basicPokemonCount} Standard-legal Basic Pokémon in deck.`;
+
+      document.getElementById('stat-brick').textContent = `${brickRate.toFixed(1)}%`;
+      const brickTag = document.getElementById('stat-brick-tag');
+      if (brickRate <= 18) {
+        brickTag.textContent = 'Smooth Engine';
+        brickTag.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+      } else if (brickRate <= 35) {
+        brickTag.textContent = 'Average';
+        brickTag.className = 'text-xs px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-500/40';
+      } else {
+        brickTag.textContent = 'Brick Risk';
+        brickTag.className = 'text-xs px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/40';
+      }
+      document.getElementById('stat-brick-desc').textContent =
+        `${drawSupporterCount} Draw effects & ${searchItemCount} Search cards active.`;
+
+      document.getElementById('stat-consistency-val').textContent = `${consistencyScore.toFixed(1)} / 10`;
+      document.getElementById('stat-consistency-bar').style.width = `${consistencyScore * 10}%`;
+
+      document.getElementById('stat-power-val').textContent = `${powerScore.toFixed(1)} / 10`;
+      document.getElementById('stat-power-bar').style.width = `${powerScore * 10}%`;
+    }
+
+    /********************************************************************
+     * 10. PLAYTEST SIMULATOR (CLEAN NON-OVERLAPPING CARDS)
+     ********************************************************************/
+    function buildPlaytestPool() {
+      let pool = [];
+      Object.entries(currentDeck).forEach(([cardId, qty]) => {
+        const card = getCardById(cardId);
+        if (card) {
+          for (let i = 0; i < qty; i++) {
+            pool.push({ ...card, uid: `${cardId}-${i}-${Math.random().toString(36).slice(2, 7)}` });
+          }
+        }
+      });
+
+      if (pool.length < 13 && resolvedRecommendations.length > 0) {
+        showToast('Deck has <13 cards; padded simulation pool with live Limitless distribution cards!');
+        resolvedRecommendations.forEach(rec => {
+          for (let i = 0; i < rec.max; i++) {
+            if (pool.length < 60) {
+              pool.push({ ...rec.card, uid: `pad-${rec.card.id}-${i}-${Math.random()}` });
+            }
+          }
+        });
+      }
+
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      return pool;
+    }
+
+    async function openPlaytestModal() {
+      if (getTotalDeckCount() === 0 && resolvedRecommendations.length === 0 && currentStrategy) {
+        resolvedRecommendations = await fetchLiveArchetypeDistributionFromLimitless(currentStrategy);
+      }
+      document.getElementById('playtest-modal').classList.remove('hidden');
+      resetPlaytest();
+    }
+
+    function closePlaytestModal() {
+      document.getElementById('playtest-modal').classList.add('hidden');
+    }
+
+    function resetPlaytest() {
+      const pool = buildPlaytestPool();
+      playtestHand = pool.slice(0, 7);
+      playtestPrizes = pool.slice(7, 13);
+      playtestDeck = pool.slice(13);
+      playtestPrizesRevealed = false;
+      renderPlaytestState();
+    }
+
+    function drawPlaytestCard() {
+      if (playtestDeck.length === 0) {
+        showToast('No cards remaining in the deck to draw!');
+        return;
+      }
+      const drawn = playtestDeck.shift();
+      playtestHand.push(drawn);
+      renderPlaytestState();
+    }
+
+    function toggleSeeDeckView() {
+      playtestSeeDeckOpen = !playtestSeeDeckOpen;
+      const drawer = document.getElementById('playtest-deck-drawer');
+      if (playtestSeeDeckOpen) {
+        drawer.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+      }
+      renderPlaytestState();
+    }
+
+    function moveCardFromDeckToHand(deckIndex) {
+      if (deckIndex < 0 || deckIndex >= playtestDeck.length) return;
+      const [selectedCard] = playtestDeck.splice(deckIndex, 1);
+      playtestHand.push(selectedCard);
+      showToast(`Moved ${selectedCard.name} from Deck into your Hand!`);
+      renderPlaytestState();
+    }
+
+    function takePrizeIntoHand(prizeIndex) {
+      if (prizeIndex < 0 || prizeIndex >= playtestPrizes.length) return;
+      const [prizeCard] = playtestPrizes.splice(prizeIndex, 1);
+      playtestHand.push(prizeCard);
+      showToast(`Claimed Prize Card: ${prizeCard.name}!`);
+      renderPlaytestState();
+    }
+
+    function toggleRevealAllPrizes() {
+      playtestPrizesRevealed = !playtestPrizesRevealed;
+      renderPlaytestState();
+    }
+
+    function renderPlaytestState() {
+      document.getElementById('pt-hand-count').textContent = playtestHand.length;
+      document.getElementById('hand-count-title').textContent = playtestHand.length;
+      document.getElementById('pt-prize-count').textContent = playtestPrizes.length;
+      document.getElementById('pt-deck-count').textContent = playtestDeck.length;
+      document.getElementById('see-deck-label').textContent =
+        `${playtestSeeDeckOpen ? 'Hide Deck' : 'See Deck'} (${playtestDeck.length})`;
+
+      const hasBasic = playtestHand.some(c => c.isBasic && c.category === 'Pokemon');
+      const badge = document.getElementById('playtest-hand-badge');
+      const evalText = document.getElementById('pt-hand-evaluation');
+      if (hasBasic) {
+        badge.textContent = 'Legal Opening Hand';
+        badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-300 font-bold';
+        evalText.textContent = 'Opening hand contains a Basic Pokémon! Use Draw Card or See Deck to select any card from your deck into your hand.';
+      } else {
+        badge.textContent = 'MULLIGAN! (0 Basics)';
+        badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-rose-950 border border-rose-400 text-rose-300 font-bold';
+        evalText.textContent = 'No Basic Pokémon in this 7-card opening hand — click Reset to take a Mulligan reshuffle!';
+      }
+
+      // Render 6 Prize Cards (each in its own clean non-overlapping card tile)
+      const prizesGrid = document.getElementById('playtest-prizes-grid');
+      if (playtestPrizes.length === 0) {
+        prizesGrid.innerHTML = `<div class="col-span-full text-xs text-emerald-300 py-4 text-center font-bold">All 6 Prize Cards Claimed!</div>`;
+      } else {
+        prizesGrid.innerHTML = playtestPrizes.map((card, idx) => {
+          if (playtestPrizesRevealed) {
+            return createCleanCardTileHTML(card, {
+              actionHint: `Take Prize #${idx + 1}`,
+              onClickAction: `takePrizeIntoHand(${idx})`
+            });
+          } else {
+            return `
+              <div onclick="takePrizeIntoHand(${idx})"
+                   title="Prize Card #${idx + 1} (Click to take into hand)"
+                   class="card-tile cursor-pointer hover:border-[#00b0ff]">
+                <div class="card-artwork-frame bg-gradient-to-br from-indigo-950 via-[#101328] to-purple-950 flex flex-col items-center justify-center p-3">
+                  <div class="w-10 h-10 rounded-full border-2 border-purple-400/70 bg-black/40 flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-crown text-purple-300 text-base"></i>
+                  </div>
+                  <span class="text-xs font-extrabold tracking-wider text-purple-200">PRIZE #${idx + 1}</span>
+                </div>
+                <div class="mt-2 pt-1.5 border-t border-indigo-500/30 text-center">
+                  <span class="text-[11px] font-bold text-cyan-300">Click to Take →</span>
+                </div>
+              </div>
+            `;
+          }
+        }).join('');
+      }
+
+      // Render Hand Cards (cleanly separated individual card tiles)
+      const handGrid = document.getElementById('playtest-hand-grid');
+      handGrid.innerHTML = playtestHand.map(card => createCleanCardTileHTML(card)).join('');
+
+      // Render Remaining Deck Drawer (See Deck -> click any card tile to put into hand)
+      const deckGrid = document.getElementById('playtest-deck-grid');
+      if (playtestDeck.length === 0) {
+        deckGrid.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400 text-xs">Deck is empty.</div>`;
+      } else {
+        deckGrid.innerHTML = playtestDeck.map((card, idx) => {
+          return createCleanCardTileHTML(card, {
+            actionHint: '+ To Hand',
+            onClickAction: `moveCardFromDeckToHand(${idx})`
+          });
+        }).join('');
+      }
+    }
+
+    // Boot: Dynamically detect current Standard Format Regulation Marks & pre-warm live Limitless TCG strategies
+    window.addEventListener('DOMContentLoaded', async () => {
+      await detectLiveStandardFormat();
+    });
+  </script>
+</body>
+</html>
